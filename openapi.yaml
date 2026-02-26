@@ -13,12 +13,32 @@ tags:
     description: Gestión del menú de tacos
   - name: Orders
     description: Gestión de pedidos
+  - name: Customers
+    description: Gestión de clientes
 
 paths:
   /tacos:
     get:
+      operationId: getTacos
       tags: [Tacos]
       summary: Obtener todos los tacos del menú
+      parameters:
+        - name: isVegetarian
+          in: query
+          schema:
+            type: boolean
+          description: Filtrar por tacos vegetarianos
+        - name: proteinType
+          in: query
+          schema:
+            type: string
+            enum: [asada, pastor, chorizo, huevo]
+          description: Filtrar por tipo de proteína
+        - name: available
+          in: query
+          schema:
+            type: boolean
+          description: Filtrar por disponibilidad
       responses:
         "200":
           description: Lista de tacos
@@ -29,6 +49,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Taco"
     post:
+      operationId: createTaco
       tags: [Tacos]
       summary: Agregar un nuevo taco al menú
       requestBody:
@@ -47,6 +68,7 @@ paths:
 
   /tacos/{id}:
     get:
+      operationId: getTacoById
       tags: [Tacos]
       summary: Obtener un taco por ID
       parameters:
@@ -61,6 +83,7 @@ paths:
         "404":
           description: Taco no encontrado
     put:
+      operationId: updateTaco
       tags: [Tacos]
       summary: Actualizar un taco
       parameters:
@@ -81,6 +104,7 @@ paths:
         "404":
           description: Taco no encontrado
     delete:
+      operationId: deleteTaco
       tags: [Tacos]
       summary: Eliminar un taco del menú
       parameters:
@@ -93,8 +117,20 @@ paths:
 
   /orders:
     get:
+      operationId: getOrders
       tags: [Orders]
       summary: Obtener todos los pedidos
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/OrderStatus"
+          description: Filtrar por estado del pedido
+        - name: customerId
+          in: query
+          schema:
+            type: string
+          description: Filtrar por cliente
       responses:
         "200":
           description: Lista de pedidos
@@ -105,6 +141,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Order"
     post:
+      operationId: createOrder
       tags: [Orders]
       summary: Crear un nuevo pedido
       requestBody:
@@ -123,6 +160,7 @@ paths:
 
   /orders/{id}:
     get:
+      operationId: getOrderById
       tags: [Orders]
       summary: Obtener un pedido por ID
       parameters:
@@ -137,6 +175,7 @@ paths:
         "404":
           description: Pedido no encontrado
     put:
+      operationId: updateOrder
       tags: [Orders]
       summary: Actualizar el estado de un pedido
       parameters:
@@ -160,6 +199,7 @@ paths:
         "404":
           description: Pedido no encontrado
     delete:
+      operationId: deleteOrder
       tags: [Orders]
       summary: Eliminar un pedido
       parameters:
@@ -169,6 +209,87 @@ paths:
           description: Pedido eliminado exitosamente
         "404":
           description: Pedido no encontrado
+
+  /customers:
+    get:
+      operationId: getCustomers
+      tags: [Customers]
+      summary: Obtener todos los clientes
+      responses:
+        "200":
+          description: Lista de clientes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Customer"
+    post:
+      operationId: createCustomer
+      tags: [Customers]
+      summary: Crear un nuevo cliente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "201":
+          description: Cliente creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /customers/{id}:
+    get:
+      operationId: getCustomerById
+      tags: [Customers]
+      summary: Obtener un cliente por ID
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Cliente encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "404":
+          description: Cliente no encontrado
+    put:
+      operationId: updateCustomer
+      tags: [Customers]
+      summary: Actualizar un cliente
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "200":
+          description: Cliente actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "404":
+          description: Cliente no encontrado
+    delete:
+      operationId: deleteCustomer
+      tags: [Customers]
+      summary: Eliminar un cliente
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Cliente eliminado exitosamente
+        "404":
+          description: Cliente no encontrado
 
 components:
   parameters:
@@ -180,23 +301,70 @@ components:
         type: string
 
   schemas:
+    CondimentAmount:
+      type: string
+      enum: [poco, regular, mucho]
+
+    ProteinQuantity:
+      type: string
+      enum: ["1", "doble", "triple"]
+
+    TacoMetadata:
+      type: object
+      description: Información opcional de condimentos y salsas
+      properties:
+        condiments:
+          type: array
+          items:
+            type: string
+            enum: [cebolla, piña, cilantro]
+          description: Lista de condimentos
+        condimentAmount:
+          $ref: "#/components/schemas/CondimentAmount"
+        sauces:
+          type: array
+          items:
+            type: string
+          description: Lista de salsas
+        sauceAmount:
+          $ref: "#/components/schemas/CondimentAmount"
+
     Taco:
       type: object
       properties:
         id:
           type: string
+          example: "1"
         name:
           type: string
+          example: "Taco de Pastor"
         description:
           type: string
         price:
           type: number
+          example: 25.0
         available:
           type: boolean
+          example: true
+        isVegetarian:
+          type: boolean
+          example: false
+        proteinType:
+          type: string
+          enum: [asada, pastor, chorizo, huevo]
+          example: pastor
+        proteinQuantity:
+          $ref: "#/components/schemas/ProteinQuantity"
+        addOnPricePerUnit:
+          type: number
+          description: Precio extra por unidad adicional de proteína
+          example: 10.0
+        metadata:
+          $ref: "#/components/schemas/TacoMetadata"
 
     TacoInput:
       type: object
-      required: [name, price]
+      required: [name, price, proteinType]
       properties:
         name:
           type: string
@@ -206,6 +374,17 @@ components:
           type: number
         available:
           type: boolean
+        isVegetarian:
+          type: boolean
+        proteinType:
+          type: string
+          enum: [asada, pastor, chorizo, huevo]
+        proteinQuantity:
+          $ref: "#/components/schemas/ProteinQuantity"
+        addOnPricePerUnit:
+          type: number
+        metadata:
+          $ref: "#/components/schemas/TacoMetadata"
 
     OrderStatus:
       type: string
@@ -213,6 +392,7 @@ components:
 
     OrderItem:
       type: object
+      required: [tacoId, quantity]
       properties:
         tacoId:
           type: string
@@ -223,6 +403,8 @@ components:
       type: object
       properties:
         id:
+          type: string
+        customerId:
           type: string
         customerName:
           type: string
@@ -236,14 +418,44 @@ components:
           $ref: "#/components/schemas/OrderStatus"
         createdAt:
           type: string
+          format: date-time
 
     OrderInput:
       type: object
       required: [customerName, items]
       properties:
+        customerId:
+          type: string
         customerName:
           type: string
         items:
           type: array
           items:
             $ref: "#/components/schemas/OrderItem"
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "1"
+        name:
+          type: string
+          example: "Juan Pérez"
+        email:
+          type: string
+          example: "juan@example.com"
+        phone:
+          type: string
+          example: "555-1234"
+
+    CustomerInput:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
