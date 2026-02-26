@@ -3,7 +3,25 @@ import { tacos } from "../data/dummy";
 import type { Taco } from "../data/types";
 
 export const getAllTacos = (c: Context) => {
-  return c.json(tacos);
+  let result = [...tacos];
+
+  const isVegetarian = c.req.query("isVegetarian");
+  const proteinType = c.req.query("proteinType");
+  const available = c.req.query("available");
+
+  if (isVegetarian !== undefined) {
+    result = result.filter((t) => t.isVegetarian === (isVegetarian === "true"));
+  }
+
+  if (proteinType) {
+    result = result.filter((t) => t.proteinType === proteinType);
+  }
+
+  if (available !== undefined) {
+    result = result.filter((t) => t.available === (available === "true"));
+  }
+
+  return c.json(result);
 };
 
 export const getTacoById = (c: Context) => {
@@ -26,6 +44,11 @@ export const createTaco = async (c: Context) => {
     description: body.description,
     price: body.price,
     available: body.available ?? true,
+    isVegetarian: body.isVegetarian ?? false,
+    proteinType: body.proteinType,
+    proteinQuantity: body.proteinQuantity ?? "1",
+    addOnPricePerUnit: body.addOnPricePerUnit ?? 0,
+    metadata: body.metadata,
   };
 
   tacos.push(newTaco);

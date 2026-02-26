@@ -3,12 +3,26 @@ import { orders, tacos } from "../data/dummy";
 import type { Order, OrderStatus } from "../data/types";
 
 interface OrderInput {
+  customerId?: string;
   customerName: string;
   items: { tacoId: string; quantity: number }[];
 }
 
 export const getAllOrders = (c: Context) => {
-  return c.json(orders);
+  let result = [...orders];
+
+  const status = c.req.query("status");
+  const customerId = c.req.query("customerId");
+
+  if (status) {
+    result = result.filter((o) => o.status === status);
+  }
+
+  if (customerId) {
+    result = result.filter((o) => o.customerId === customerId);
+  }
+
+  return c.json(result);
 };
 
 export const getOrderById = (c: Context) => {
@@ -39,6 +53,7 @@ export const createOrder = async (c: Context) => {
 
   const newOrder: Order = {
     id: String(orders.length + 101),
+    customerId: body.customerId,
     customerName: body.customerName,
     items: body.items,
     total,
