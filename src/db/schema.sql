@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS tacos (id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, price REAL NOT NULL, available INTEGER NOT NULL DEFAULT 1, is_vegetarian INTEGER NOT NULL DEFAULT 0, protein_type TEXT NOT NULL, protein_quantity TEXT NOT NULL DEFAULT '1', add_on_price_per_unit REAL NOT NULL DEFAULT 0, metadata TEXT);
+CREATE TABLE IF NOT EXISTS customers (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, phone TEXT);
+CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, customer_id TEXT, customer_name TEXT NOT NULL, items TEXT NOT NULL, total REAL NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL);
+INSERT OR IGNORE INTO tacos VALUES ('1','Taco de Pastor','Marinated pork',25.0,1,0,'pastor','1',10.0,'{}');
+INSERT OR IGNORE INTO tacos VALUES ('2','Taco de Bistec','Grilled beef',30.0,1,0,'asada','1',12.0,'{}');
+INSERT OR IGNORE INTO tacos VALUES ('3','Taco de Chorizo','Fried chorizo',28.0,1,0,'chorizo','1',10.0,'{}');
+INSERT OR IGNORE INTO tacos VALUES ('4','Taco de Huevo','Scrambled eggs',22.0,1,1,'huevo','1',8.0,'{}');
+INSERT OR IGNORE INTO customers VALUES ('1','Juan Perez','juan@example.com','555-1234');
+INSERT OR IGNORE INTO customers VALUES ('2','Ana Garcia','ana@example.com','555-5678');
+INSERT OR IGNORE INTO orders VALUES ('101','1','Juan Perez','[]',135.0,'pending','2024-01-01');

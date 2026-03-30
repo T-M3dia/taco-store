@@ -1,5 +1,4 @@
 import type { Context } from "hono";
-import { orders, tacos } from "../data/dummy";
 import type { Order, OrderStatus } from "../data/types";
 
 interface OrderInput {
@@ -8,85 +7,86 @@ interface OrderInput {
   items: { tacoId: string; quantity: number }[];
 }
 
-export const getAllOrders = (c: Context) => {
-  let result = [...orders];
+export const getAllOrders = async (c: Context) => {
+  const db = c.env.taco_store_db;
+  const { status, customerId } = c.req.query();
 
-  const status = c.req.query("status");
-  const customerId = c.req.query("customerId");
+  let query = "SELECT * FROM orders WHERE 1=1";
+  const params: unknown[] = [];
 
   if (status) {
-    result = result.filter((o) => o.status === status);
+    query += " AND status = ?";
+    params.push(status);
   }
-
   if (customerId) {
-    result = result.filter((o) => o.customerId === customerId);
+    query += " AND customer_id = ?";
+    params.push(customerId);
   }
 
-  return c.json(result);
+  const { results } = await db.prepare(query).bind(...params).all();
+  return c.json(results.map(formatOrder));
 };
 
-export const getOrderById = (c: Context) => {
+export const getOrderById = async (c: Context) => {
+  const db = c.env.taco_store_db;
   const id = c.req.param("id");
-  const order = orders.find((o) => o.id === id);
-
-  if (!order) {
-    return c.json({ message: "Pedido no encontrado" }, 404);
-  }
-
-  return c.json(order);
+  const order = await db.prepare("SELECT * FROM orders WHERE id = ?").bind(id).first();
+  if (!order) return c.json({ message: "Order not found" }, 404);
+  return c.json(formatOrder(order));
 };
 
 export const createOrder = async (c: Context) => {
+  const db = c.env.taco_store_db;
   const body = await c.req.json<OrderInput>();
 
   let total = 0;
   for (const item of body.items) {
-    const taco = tacos.find((t) => t.id === item.tacoId);
-    if (!taco) {
-      return c.json({ message: `Taco con id ${item.tacoId} no encontrado` }, 404);
-    }
-    if (!taco.available) {
-      return c.json({ message: `El taco "${taco.name}" no está disponible` }, 400);
-    }
-    total += taco.price * item.quantity;
+    const taco = await db.prepare("SELECT * FROM tacos WHERE id = ?").bind(item.tacoId).first();
+    if (!taco) return c.json({ message: `Taco with id ${item.tacoId} not found` }, 404);
+    if (!taco.available) return c.json({ message: `Taco "${taco.name}" is not available` }, 400);
+    total += (taco.price as number) * item.quantity;
   }
 
-  const newOrder: Order = {
-    id: String(orders.length + 101),
-    customerId: body.customerId,
-    customerName: body.customerName,
-    items: body.items,
-    total,
-    status: "pending",
-    createdAt: new Date().toISOString(),
-  };
+  const id = crypto.randomUUID();
+  await db.prepare("INSERT INTO orders VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .bind(id, body.customerId ?? null, body.customerName, JSON.stringify(body.items), total, "pending", new Date().toISOString())
+    .run();
 
-  orders.push(newOrder);
-  return c.json(newOrder, 201);
+  const order = await db.prepare("SELECT * FROM orders WHERE id = ?").bind(id).first();
+  return c.json(formatOrder(order), 201);
 };
 
 export const updateOrder = async (c: Context) => {
+  const db = c.env.taco_store_db;
   const id = c.req.param("id");
-  const index = orders.findIndex((o) => o.id === id);
-
-  if (index === -1) {
-    return c.json({ message: "Pedido no encontrado" }, 404);
-  }
-
   const body = await c.req.json<{ status: OrderStatus }>();
-  orders[index] = { ...orders[index], status: body.status };
 
-  return c.json(orders[index]);
+  const existing = await db.prepare("SELECT * FROM orders WHERE id = ?").bind(id).first();
+  if (!existing) return c.json({ message: "Order not found" }, 404);
+
+  await db.prepare("UPDATE orders SET status = ? WHERE id = ?").bind(body.status, id).run();
+  const order = await db.prepare("SELECT * FROM orders WHERE id = ?").bind(id).first();
+  return c.json(formatOrder(order));
 };
 
-export const deleteOrder = (c: Context) => {
+export const deleteOrder = async (c: Context) => {
+  const db = c.env.taco_store_db;
   const id = c.req.param("id");
-  const index = orders.findIndex((o) => o.id === id);
+  const existing = await db.prepare("SELECT * FROM orders WHERE id = ?").bind(id).first();
+  if (!existing) return c.json({ message: "Order not found" }, 404);
 
-  if (index === -1) {
-    return c.json({ message: "Pedido no encontrado" }, 404);
-  }
-
-  orders.splice(index, 1);
-  return c.json({ message: "Pedido eliminado exitosamente" });
+  await db.prepare("DELETE FROM orders WHERE id = ?").bind(id).run();
+  return c.json({ message: "Order deleted successfully" });
 };
+
+function formatOrder(row: any) {
+  return {
+    id: row.id,
+    customerId: row.customer_id,
+    customerName: row.customer_name,
+    items: JSON.parse(row.items),
+    total: row.total,
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}

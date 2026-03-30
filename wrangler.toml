@@ -1,0 +1,9 @@
+name = "taco-store"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "taco_store_db"
+database_name = "taco-store-db"
+database_id = "d4e7e253-b040-4bab-9881-b06fa8ad63e0"

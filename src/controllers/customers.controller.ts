@@ -1,58 +1,53 @@
 import type { Context } from "hono";
-import { customers } from "../data/dummy";
 import type { Customer } from "../data/types";
 
-export const getAllCustomers = (c: Context) => {
-  return c.json(customers);
+export const getAllCustomers = async (c: Context) => {
+  const db = c.env.taco_store_db;
+  const { results } = await db.prepare("SELECT * FROM customers").all();
+  return c.json(results);
 };
 
-export const getCustomerById = (c: Context) => {
+export const getCustomerById = async (c: Context) => {
+  const db = c.env.taco_store_db;
   const id = c.req.param("id");
-  const customer = customers.find((c) => c.id === id);
-
-  if (!customer) {
-    return c.json({ message: "Cliente no encontrado" }, 404);
-  }
-
+  const customer = await db.prepare("SELECT * FROM customers WHERE id = ?").bind(id).first();
+  if (!customer) return c.json({ message: "Customer not found" }, 404);
   return c.json(customer);
 };
 
 export const createCustomer = async (c: Context) => {
+  const db = c.env.taco_store_db;
   const body = await c.req.json<Omit<Customer, "id">>();
+  const id = crypto.randomUUID();
 
-  const newCustomer: Customer = {
-    id: String(customers.length + 1),
-    name: body.name,
-    email: body.email,
-    phone: body.phone,
-  };
+  await db.prepare("INSERT INTO customers VALUES (?, ?, ?, ?)")
+    .bind(id, body.name, body.email, body.phone ?? null).run();
 
-  customers.push(newCustomer);
-  return c.json(newCustomer, 201);
+  const customer = await db.prepare("SELECT * FROM customers WHERE id = ?").bind(id).first();
+  return c.json(customer, 201);
 };
 
 export const updateCustomer = async (c: Context) => {
+  const db = c.env.taco_store_db;
   const id = c.req.param("id");
-  const index = customers.findIndex((c) => c.id === id);
-
-  if (index === -1) {
-    return c.json({ message: "Cliente no encontrado" }, 404);
-  }
-
   const body = await c.req.json<Partial<Omit<Customer, "id">>>();
-  customers[index] = { ...customers[index], ...body };
 
-  return c.json(customers[index]);
+  const existing = await db.prepare("SELECT * FROM customers WHERE id = ?").bind(id).first();
+  if (!existing) return c.json({ message: "Customer not found" }, 404);
+
+  await db.prepare("UPDATE customers SET name=?, email=?, phone=? WHERE id=?")
+    .bind(body.name ?? existing.name, body.email ?? existing.email, body.phone ?? existing.phone, id).run();
+
+  const customer = await db.prepare("SELECT * FROM customers WHERE id = ?").bind(id).first();
+  return c.json(customer);
 };
 
-export const deleteCustomer = (c: Context) => {
+export const deleteCustomer = async (c: Context) => {
+  const db = c.env.taco_store_db;
   const id = c.req.param("id");
-  const index = customers.findIndex((c) => c.id === id);
+  const existing = await db.prepare("SELECT * FROM customers WHERE id = ?").bind(id).first();
+  if (!existing) return c.json({ message: "Customer not found" }, 404);
 
-  if (index === -1) {
-    return c.json({ message: "Cliente no encontrado" }, 404);
-  }
-
-  customers.splice(index, 1);
-  return c.json({ message: "Cliente eliminado exitosamente" });
+  await db.prepare("DELETE FROM customers WHERE id = ?").bind(id).run();
+  return c.json({ message: "Customer deleted successfully" });
 };
