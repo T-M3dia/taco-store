@@ -12,7 +12,7 @@ app.route("/tacos", tacosRouter);
 app.route("/orders", ordersRouter);
 app.route("/customers", customersRouter);
 
-app.get("/", (c) => c.json({ message: "🌮 Taco Store API funcionando!" }));
+app.get("/", (c) => c.json({ message: "Taco Store API is running!" }));
 
 export default {
   port: 3000,

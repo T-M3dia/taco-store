@@ -4,7 +4,7 @@ export type ProteinType = "asada" | "pastor" | "chorizo" | "huevo";
 export type OrderStatus = "pending" | "preparing" | "ready" | "delivered" | "cancelled";
 
 export interface TacoMetadata {
-  condiments?: ("cebolla" | "piña" | "cilantro")[];
+  condiments?: ("cebolla" | "pina" | "cilantro")[];
   condimentAmount?: CondimentAmount;
   sauces?: string[];
   sauceAmount?: CondimentAmount;
